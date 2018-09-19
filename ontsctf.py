@@ -195,9 +195,12 @@ def invoke(sdk, m, function_name=None):
                 func_map["signers"] = None
         func_maps[i["function_name"]] = func_map
     with open(str(m["abi_path"]), "r") as f:
-        abi = json.loads(f.read(), object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
-        abi_info = AbiInfo(abi.hash, abi.entrypoint, abi.functions, abi.events)
-        contract_address = bytearray.fromhex(str(abi.hash)[2:])
+        abi = json.loads(f.read())
+        abi_info = AbiInfo(abi['hash'], abi['entrypoint'], abi['functions'], abi['events'])
+        code_address = str(abi['hash'])
+        if code_address.startswith('0x'):
+            code_address = code_address.replace('0x', '')
+        contract_address = bytearray.fromhex(code_address)
         m["contract_address"] = contract_address.hex()
         contract_address.reverse()
         sdk.wallet_manager.open_wallet(m["wallet_file_path"])
@@ -378,7 +381,7 @@ def convert_params(func, func_map: {}):
             try:
                 addr = bytearray()
                 if func_map["param_list"][i].startswith("A"):
-                    addr = Address.b58decode(func_map["param_list"][i], False).to_array()
+                    addr = Address.b58decode(func_map["param_list"][i]).to_array()
                 else:
                     addr = Address(bytearray.fromhex(func_map["param_list"][i])).to_array()
                 params.append(addr)
@@ -400,7 +403,7 @@ def convert_params(func, func_map: {}):
                                 temp.append(str(p).split(":")[1])
                             elif str(p).split(":")[0] == "ByteArray":
                                 try:
-                                    temp.append(Address.b58decode(str(p).split(":")[1], False).to_array())
+                                    temp.append(Address.b58decode(str(p).split(":")[1]).to_array())
                                 except Exception as e:
                                     temp.append(str(p).split(":")[1].encode())
                         elif type(p) is bool:
